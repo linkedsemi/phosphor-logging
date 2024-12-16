@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #define SD_JOURNAL_SUPPRESS_LOCATION
 
 #include <systemd/sd-journal.h>
