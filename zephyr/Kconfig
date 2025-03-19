@@ -1,0 +1,4 @@
+
+config OPENBMC_PHOSPHOR_LOGGING
+    bool "openbmc phosphor logging"
+    
