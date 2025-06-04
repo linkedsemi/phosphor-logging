@@ -36,7 +36,7 @@ bool Entry::resolved(bool value)
                           .count();
         updateTimestamp(ms);
 
-        serialize(*this);
+        // serialize(*this);
     }
 
     return current;
@@ -51,7 +51,7 @@ std::string Entry::eventId(std::string value)
         current =
             sdbusplus::xyz::openbmc_project::Logging::server::Entry::eventId(
                 value);
-        serialize(*this);
+        // serialize(*this);
     }
 
     return current;
@@ -66,7 +66,7 @@ std::string Entry::resolution(std::string value)
         current =
             sdbusplus::xyz::openbmc_project::Logging::server::Entry::resolution(
                 value);
-        serialize(*this);
+        // serialize(*this);
     }
 
     return current;

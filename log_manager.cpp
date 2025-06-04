@@ -85,112 +85,112 @@ void Manager::_commit(uint64_t transactionId [[maybe_unused]],
 {
     std::vector<std::string> additionalData{};
 
-    // When running as a test-case, the system may have a LOT of journal
-    // data and we may not have permissions to do some of the journal sync
-    // operations.  Just skip over them.
-    if (!IS_UNIT_TEST)
-    {
-        static constexpr auto transactionIdVar =
-            std::string_view{"TRANSACTION_ID"};
-        // Length of 'TRANSACTION_ID' string.
-        static constexpr auto transactionIdVarSize = transactionIdVar.size();
-        // Length of 'TRANSACTION_ID=' string.
-        static constexpr auto transactionIdVarOffset = transactionIdVarSize + 1;
+    // // When running as a test-case, the system may have a LOT of journal
+    // // data and we may not have permissions to do some of the journal sync
+    // // operations.  Just skip over them.
+    // if (!IS_UNIT_TEST)
+    // {
+    //     static constexpr auto transactionIdVar =
+    //         std::string_view{"TRANSACTION_ID"};
+    //     // Length of 'TRANSACTION_ID' string.
+    //     static constexpr auto transactionIdVarSize = transactionIdVar.size();
+    //     // Length of 'TRANSACTION_ID=' string.
+    //     static constexpr auto transactionIdVarOffset = transactionIdVarSize + 1;
 
-        // Flush all the pending log messages into the journal
-        util::journalSync();
+    //     // Flush all the pending log messages into the journal
+    //     util::journalSync();
 
-        sd_journal* j = nullptr;
-        int rc = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
-        if (rc < 0)
-        {
-            lg2::error("Failed to open journal: {ERROR}", "ERROR",
-                       strerror(-rc));
-            return;
-        }
+    //     sd_journal* j = nullptr;
+    //     int rc = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
+    //     if (rc < 0)
+    //     {
+    //         lg2::error("Failed to open journal: {ERROR}", "ERROR",
+    //                    strerror(-rc));
+    //         return;
+    //     }
 
-        std::string transactionIdStr = std::to_string(transactionId);
-        std::set<std::string> metalist;
-        auto metamap = g_errMetaMap.find(errMsg);
-        if (metamap != g_errMetaMap.end())
-        {
-            metalist.insert(metamap->second.begin(), metamap->second.end());
-        }
+    //     std::string transactionIdStr = std::to_string(transactionId);
+    //     std::set<std::string> metalist;
+    //     auto metamap = g_errMetaMap.find(errMsg);
+    //     if (metamap != g_errMetaMap.end())
+    //     {
+    //         metalist.insert(metamap->second.begin(), metamap->second.end());
+    //     }
 
-        // Add _PID field information in AdditionalData.
-        metalist.insert("_PID");
+    //     // Add _PID field information in AdditionalData.
+    //     metalist.insert("_PID");
 
-        // Read the journal from the end to get the most recent entry first.
-        // The result from the sd_journal_get_data() is of the form
-        // VARIABLE=value.
-        SD_JOURNAL_FOREACH_BACKWARDS(j)
-        {
-            const char* data = nullptr;
-            size_t length = 0;
+    //     // Read the journal from the end to get the most recent entry first.
+    //     // The result from the sd_journal_get_data() is of the form
+    //     // VARIABLE=value.
+    //     SD_JOURNAL_FOREACH_BACKWARDS(j)
+    //     {
+    //         const char* data = nullptr;
+    //         size_t length = 0;
 
-            // Look for the transaction id metadata variable
-            rc = sd_journal_get_data(j, transactionIdVar.data(),
-                                     (const void**)&data, &length);
-            if (rc < 0)
-            {
-                // This journal entry does not have the TRANSACTION_ID
-                // metadata variable.
-                continue;
-            }
+    //         // Look for the transaction id metadata variable
+    //         rc = sd_journal_get_data(j, transactionIdVar.data(),
+    //                                  (const void**)&data, &length);
+    //         if (rc < 0)
+    //         {
+    //             // This journal entry does not have the TRANSACTION_ID
+    //             // metadata variable.
+    //             continue;
+    //         }
 
-            // journald does not guarantee that sd_journal_get_data() returns
-            // NULL terminated strings, so need to specify the size to use to
-            // compare, use the returned length instead of anything that relies
-            // on NULL terminators like strlen(). The data variable is in the
-            // form of 'TRANSACTION_ID=1234'. Remove the TRANSACTION_ID
-            // characters plus the (=) sign to do the comparison. 'data +
-            // transactionIdVarOffset' will be in the form of '1234'. 'length -
-            // transactionIdVarOffset' will be the length of '1234'.
-            if ((length <= (transactionIdVarOffset)) ||
-                (transactionIdStr.compare(
-                     0, transactionIdStr.size(), data + transactionIdVarOffset,
-                     length - transactionIdVarOffset) != 0))
-            {
-                // The value of the TRANSACTION_ID metadata is not the requested
-                // transaction id number.
-                continue;
-            }
+    //         // journald does not guarantee that sd_journal_get_data() returns
+    //         // NULL terminated strings, so need to specify the size to use to
+    //         // compare, use the returned length instead of anything that relies
+    //         // on NULL terminators like strlen(). The data variable is in the
+    //         // form of 'TRANSACTION_ID=1234'. Remove the TRANSACTION_ID
+    //         // characters plus the (=) sign to do the comparison. 'data +
+    //         // transactionIdVarOffset' will be in the form of '1234'. 'length -
+    //         // transactionIdVarOffset' will be the length of '1234'.
+    //         if ((length <= (transactionIdVarOffset)) ||
+    //             (transactionIdStr.compare(
+    //                  0, transactionIdStr.size(), data + transactionIdVarOffset,
+    //                  length - transactionIdVarOffset) != 0))
+    //         {
+    //             // The value of the TRANSACTION_ID metadata is not the requested
+    //             // transaction id number.
+    //             continue;
+    //         }
 
-            // Search for all metadata variables in the current journal entry.
-            for (auto i = metalist.cbegin(); i != metalist.cend();)
-            {
-                rc = sd_journal_get_data(j, (*i).c_str(), (const void**)&data,
-                                         &length);
-                if (rc < 0)
-                {
-                    // Metadata variable not found, check next metadata
-                    // variable.
-                    i++;
-                    continue;
-                }
+    //         // Search for all metadata variables in the current journal entry.
+    //         for (auto i = metalist.cbegin(); i != metalist.cend();)
+    //         {
+    //             rc = sd_journal_get_data(j, (*i).c_str(), (const void**)&data,
+    //                                      &length);
+    //             if (rc < 0)
+    //             {
+    //                 // Metadata variable not found, check next metadata
+    //                 // variable.
+    //                 i++;
+    //                 continue;
+    //             }
 
-                // Metadata variable found, save it and remove it from the set.
-                additionalData.emplace_back(data, length);
-                i = metalist.erase(i);
-            }
-            if (metalist.empty())
-            {
-                // All metadata variables found, break out of journal loop.
-                break;
-            }
-        }
-        if (!metalist.empty())
-        {
-            // Not all the metadata variables were found in the journal.
-            for (auto& metaVarStr : metalist)
-            {
-                lg2::info("Failed to find metadata: {META_FIELD}", "META_FIELD",
-                          metaVarStr);
-            }
-        }
+    //             // Metadata variable found, save it and remove it from the set.
+    //             additionalData.emplace_back(data, length);
+    //             i = metalist.erase(i);
+    //         }
+    //         if (metalist.empty())
+    //         {
+    //             // All metadata variables found, break out of journal loop.
+    //             break;
+    //         }
+    //     }
+    //     if (!metalist.empty())
+    //     {
+    //         // Not all the metadata variables were found in the journal.
+    //         for (auto& metaVarStr : metalist)
+    //         {
+    //             lg2::info("Failed to find metadata: {META_FIELD}", "META_FIELD",
+    //                       metaVarStr);
+    //         }
+    //     }
 
-        sd_journal_close(j);
-    }
+    //     sd_journal_close(j);
+    // }
     createEntry(errMsg, errLvl, additionalData);
 }
 
@@ -239,13 +239,13 @@ void Manager::createEntry(std::string errMsg, Entry::Level errLvl,
         errLvl, std::move(errMsg), std::move(additionalData),
         std::move(objects), fwVersion, getEntrySerializePath(entryId), *this);
 
-    serialize(*e);
+    // serialize(*e);
 
-    if (isQuiesceOnErrorEnabled() && (errLvl < Entry::sevLowerLimit) &&
-        isCalloutPresent(*e))
-    {
-        quiesceOnError(entryId);
-    }
+    // if (isQuiesceOnErrorEnabled() && (errLvl < Entry::sevLowerLimit) &&
+    //     isCalloutPresent(*e))
+    // {
+    //     quiesceOnError(entryId);
+    // }
 
     // Add entry before calling the extensions so that they have access to it
     entries.insert(std::make_pair(entryId, std::move(e)));
