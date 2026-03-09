@@ -21,8 +21,13 @@ if(CONFIG_OPENBMC_PHOSPHOR_LOGGING)
 
     zephyr_export_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
 
-    zephyr_library_link_libraries(cereal)
-    zephyr_library_link_libraries(sd-bus)
+    zephyr_include_directories(${ZEPHYR_BASE}/../modules/lib/basu/src)
+    zephyr_include_directories(${ZEPHYR_BASE}/../modules/lib/basu/zephyr/include)
+
+
+    zephyr_library_compile_options(-fexceptions)
+
+   # zephyr_library_link_libraries(cereal)
     zephyr_library_link_libraries(sdeventplus)
     zephyr_library_link_libraries(phosphor-dbus-interfaces)
 

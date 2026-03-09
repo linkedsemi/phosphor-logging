@@ -14,28 +14,13 @@
 
 #include <filesystem>
 
-#include <zbusplus.h>
-#include <iostream>
-
-MODULE_DEFINE_CHAN_OBSERVER(phosphor_logging);
-static sd_bus *logging_sdbus;
-int logging_main(int /*argc*/, char* /*argv*/[])
+int main(int /*argc*/, char* /*argv*/[])
 {
-    printk("In logging_main\n");
     PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
-    boost::asio::io_context io;
-
-    sd_bus_open_system(&logging_sdbus);
-
-    printk_thread("Start init_zbus_observers ...");
-    ZBUS_SET_OBSERVER(logging_sdbus, phosphor_logging);
-
-    printk_thread("request name ...");
-    sd_bus_request_name(logging_sdbus, BUSNAME_LOGGING, 0);
-
-    printk_thread("Create asio::connection bus ...");
-    sdbusplus::asio::connection bus(io, logging_sdbus);
+    auto bus = sdbusplus::bus::new_default();
+    auto event = sdeventplus::Event::get_default();
+    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 
     // Add sdbusplus ObjectManager for the 'root' path of the logging manager.
     sdbusplus::server::manager_t objManager(bus, OBJ_LOGGING);
@@ -45,9 +30,7 @@ int logging_main(int /*argc*/, char* /*argv*/[])
     phosphor::logging::Manager mgr(bus, OBJ_LOGGING, iMgr);
 
     // Create a directory to persist errors.
-    // std::error_code ec;
-    // printk_thread("Create directory to persist errors: %s", ERRLOG_PERSIST_PATH);
-    // std::filesystem::create_directories(ERRLOG_PERSIST_PATH, ec);
+    std::filesystem::create_directories(ERRLOG_PERSIST_PATH);
 
     // Recreate error d-bus objects from persisted errors.
     iMgr.restore();
@@ -65,8 +48,7 @@ int logging_main(int /*argc*/, char* /*argv*/[])
         }
     }
 
-    printk_thread("Run ...");
-    io.run();
+    bus.request_name(BUSNAME_LOGGING);
 
-    return 0;
+    return event.loop();
 }

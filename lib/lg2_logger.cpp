@@ -1,7 +1,10 @@
 #define SD_JOURNAL_SUPPRESS_LOCATION
 
 #include <systemd/sd-journal.h>
+
+#ifndef __ZEPHYR__
 #include <unistd.h>
+#endif
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -209,10 +212,16 @@ static void cerr_extra_output(level l, const lg2::source_location& s,
 
 // Use the cerr output method if we are on a TTY or if explicitly set via
 // environment variable.
-static auto extra_output_method = (isatty(fileno(stderr)) ||
-                                   nullptr != getenv("LG2_FORCE_STDERR"))
-                                      ? cerr_extra_output
-                                      : noop_extra_output;
+static auto extra_output_method =
+#ifdef __ZEPHYR__
+    (nullptr != getenv("LG2_FORCE_STDERR"))
+        ? cerr_extra_output
+        : noop_extra_output;
+#else
+    (isatty(fileno(stderr)) || nullptr != getenv("LG2_FORCE_STDERR"))
+        ? cerr_extra_output
+        : noop_extra_output;
+#endif
 
 // Do_log implementation.
 void do_log(level l, const lg2::source_location& s, const char* m, ...)

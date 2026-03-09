@@ -2,6 +2,8 @@
 
 #include "elog_serialize.hpp"
 
+#ifndef __ZEPHYR__
+
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/tuple.hpp>
@@ -153,3 +155,33 @@ bool deserialize(const fs::path& path, Entry& e)
 
 } // namespace logging
 } // namespace phosphor
+
+#else // __ZEPHYR__
+
+namespace phosphor
+{
+namespace logging
+{
+
+fs::path getEntrySerializePath(uint32_t id, const fs::path& dir)
+{
+    return dir / std::to_string(id);
+}
+
+fs::path serialize(const Entry& e, const fs::path& dir)
+{
+
+    return getEntrySerializePath(e.id(), dir);
+}
+
+bool deserialize(const fs::path& path, Entry& e)
+{
+    (void)path;
+    (void)e;
+    return false;
+}
+
+} // namespace logging
+} // namespace phosphor
+
+#endif // __ZEPHYR__
