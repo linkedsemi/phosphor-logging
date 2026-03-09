@@ -18,9 +18,9 @@
 #ifndef SD_EVENT_PRIORITY_NORMAL
 #define SD_EVENT_PRIORITY_NORMAL 0
 #endif
-int main(void)
+int logging_main(void)
 #else
-int main(int /*argc*/, char* /*argv*/[])
+int logging_main(int /*argc*/, char* /*argv*/[])
 #endif
 {
     PHOSPHOR_LOG2_USING_WITH_FLAGS;
