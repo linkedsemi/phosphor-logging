@@ -14,7 +14,14 @@
 
 #include <filesystem>
 
+#ifdef __ZEPHYR__
+#ifndef SD_EVENT_PRIORITY_NORMAL
+#define SD_EVENT_PRIORITY_NORMAL 0
+#endif
+int main(void)
+#else
 int main(int /*argc*/, char* /*argv*/[])
+#endif
 {
     PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
