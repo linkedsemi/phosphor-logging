@@ -19,7 +19,7 @@ if(CONFIG_OPENBMC_PHOSPHOR_LOGGING)
     zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/build)
     zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/gen)
 
-    zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
+    zephyr_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
 
     zephyr_library_compile_options(-fexceptions)
 

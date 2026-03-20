@@ -15,9 +15,6 @@
 #include <filesystem>
 
 #ifdef __ZEPHYR__
-#ifndef SD_EVENT_PRIORITY_NORMAL
-#define SD_EVENT_PRIORITY_NORMAL 0
-#endif
 int logging_main(void)
 #else
 int logging_main(int /*argc*/, char* /*argv*/[])
