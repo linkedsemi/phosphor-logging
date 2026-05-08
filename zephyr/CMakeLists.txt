@@ -21,9 +21,12 @@ if(CONFIG_OPENBMC_PHOSPHOR_LOGGING)
 
     zephyr_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
 
+    zephyr_library_include_directories(
+        ${CMAKE_CURRENT_LIST_DIR}/../../../openbmc_zephyr_app/app/src)
+
     zephyr_library_compile_options(-fexceptions)
 
-   # zephyr_library_link_libraries(cereal)
+    zephyr_library_link_libraries(basu)
     zephyr_library_link_libraries(sdeventplus)
     zephyr_library_link_libraries(phosphor-dbus-interfaces)
 

@@ -15,14 +15,31 @@
 #include <filesystem>
 
 #ifdef __ZEPHYR__
-int logging_main(void)
+#include "dbus_broker.h"
+#include <zephyr/kernel.h>
+
+extern "C" {
+extern struct k_sem logging_ready_sem;
+}
+#endif
+
+#ifdef __ZEPHYR__
+extern "C" int logging_main(void)
 #else
-int logging_main(int /*argc*/, char* /*argv*/[])
+extern "C" int logging_main(int /*argc*/, char* /*argv*/[])
 #endif
 {
     PHOSPHOR_LOG2_USING_WITH_FLAGS;
 
+#ifdef __ZEPHYR__
+    sd_bus* busp = nullptr;
+    if (connect_to_dbroker(&busp) < 0 || !busp) {
+        return -1;
+    }
+    sdbusplus::bus::bus bus(busp, std::false_type{});
+#else
     auto bus = sdbusplus::bus::new_default();
+#endif
     auto event = sdeventplus::Event::get_default();
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 
@@ -53,6 +70,10 @@ int logging_main(int /*argc*/, char* /*argv*/[])
     }
 
     bus.request_name(BUSNAME_LOGGING);
+
+#ifdef __ZEPHYR__
+    k_sem_give(&logging_ready_sem);
+#endif
 
     return event.loop();
 }
