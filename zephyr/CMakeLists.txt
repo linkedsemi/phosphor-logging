@@ -15,15 +15,19 @@ if(CONFIG_OPENBMC_PHOSPHOR_LOGGING)
         ${ZEPHYR_CURRENT_MODULE_DIR}/gen/elog-lookup.cpp
         ${ZEPHYR_CURRENT_MODULE_DIR}/gen/xyz/openbmc_project/Logging/Internal/Manager/server.cpp
     )
-    zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR})
-    zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/build)
-    zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/gen)
+    zephyr_library_include_directories(
+        ${ZEPHYR_CURRENT_MODULE_DIR}
+        ${ZEPHYR_CURRENT_MODULE_DIR}/gen
+        ${ZEPHYR_CURRENT_MODULE_DIR}/lib/include
+        )
 
-    zephyr_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
+    zephyr_export_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/lib/include)
 
     zephyr_library_compile_options(-fexceptions)
 
     zephyr_library_link_libraries(basu)
+    zephyr_library_link_libraries(boost)
+    zephyr_library_link_libraries(sdbusplus)
     zephyr_library_link_libraries(sdeventplus)
     zephyr_library_link_libraries(phosphor-dbus-interfaces)
 
