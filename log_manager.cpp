@@ -16,7 +16,9 @@
 #include <sdbusplus/vtable.hpp>
 #include <xyz/openbmc_project/State/Host/server.hpp>
 
+#include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -26,6 +28,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -35,6 +38,12 @@ extern const std::map<
     phosphor::logging::metadata::Metadata,
     std::function<phosphor::logging::metadata::associations::Type>>
     meta;
+
+// Zephyr has no persistent journal; sd_journal_send() captures the fields
+// of each transaction in-memory and exposes them through this C function
+// (see basu_journal_get_transaction_fields in sd-journal.c).
+extern "C" int basu_journal_get_transaction_fields(const char* txid,
+                                                   char* buf, size_t sz);
 
 namespace phosphor
 {
@@ -89,6 +98,28 @@ void Manager::_commit(uint64_t transactionId [[maybe_unused]],
     // // data and we may not have permissions to do some of the journal sync
     // // operations.  Just skip over them.
     // if (!IS_UNIT_TEST)
+#ifdef __ZEPHYR__
+    {
+        // Zephyr has no persistent journal and sd_journal_open() is a stub,
+        // so recover the fields captured by sd_journal_send() for this
+        // transaction (see basu_journal_get_transaction_fields).
+        char fields[1024];
+        std::string txStr = std::to_string(transactionId);
+        if (basu_journal_get_transaction_fields(txStr.c_str(), fields,
+                                                sizeof(fields)) >= 0)
+        {
+            std::istringstream ss(fields);
+            std::string line;
+            while (std::getline(ss, line))
+            {
+                if (!line.empty())
+                {
+                    additionalData.emplace_back(line);
+                }
+            }
+        }
+    }
+#else
     // {
     //     static constexpr auto transactionIdVar =
     //         std::string_view{"TRANSACTION_ID"};
@@ -191,6 +222,7 @@ void Manager::_commit(uint64_t transactionId [[maybe_unused]],
 
     //     sd_journal_close(j);
     // }
+#endif
     createEntry(errMsg, errLvl, additionalData);
 }
 
@@ -516,6 +548,10 @@ void Manager::erase(uint32_t entryId)
         fs::path errorPath(ERRLOG_PERSIST_PATH);
         errorPath /= std::to_string(entryId);
         fs::remove(errorPath);
+        // Also remove the human-readable summary if present.
+        fs::path summaryPath(errorPath);
+        summaryPath += ".txt";
+        fs::remove(summaryPath);
 
         auto removeId = [](std::list<uint32_t>& ids, uint32_t id) {
             auto it = std::find(ids.begin(), ids.end(), id);
@@ -570,7 +606,15 @@ void Manager::restore()
 
     for (auto& file : fs::directory_iterator(dir))
     {
-        auto id = file.path().filename().c_str();
+        // Only pure-numeric filenames are error entries; skip the
+        // human-readable "<id>.txt" summaries (and any stray files).
+        auto id = file.path().filename().string();
+        if (id.empty() ||
+            !std::all_of(id.begin(), id.end(),
+                         [](char c) { return std::isdigit(c) != 0; }))
+        {
+            continue;
+        }
         auto idNum = std::stol(id);
         auto e = std::make_unique<Entry>(
             busLog, std::string(OBJ_ENTRY) + '/' + id, idNum, *this);

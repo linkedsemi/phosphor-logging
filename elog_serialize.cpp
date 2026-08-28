@@ -112,6 +112,22 @@ fs::path getEntrySerializePath(uint32_t id, const fs::path& dir)
     return dir / std::to_string(id);
 }
 
+static const char* levelStr(Entry::Level lvl)
+{
+    switch (lvl)
+    {
+        case Entry::Level::Emergency: return "Emergency";
+        case Entry::Level::Alert: return "Alert";
+        case Entry::Level::Critical: return "Critical";
+        case Entry::Level::Error: return "Error";
+        case Entry::Level::Warning: return "Warning";
+        case Entry::Level::Notice: return "Notice";
+        case Entry::Level::Informational: return "Informational";
+        case Entry::Level::Debug: return "Debug";
+    }
+    return "Unknown";
+}
+
 fs::path serialize(const Entry& e, const fs::path& dir)
 {
     auto path = getEntrySerializePath(e.id(), dir);
@@ -141,6 +157,27 @@ fs::path serialize(const Entry& e, const fs::path& dir)
     {
         log<level::ERR>("serialize: write failed for {PATH}",
                         entry("PATH=%s", path.c_str()));
+    }
+
+    // Human-readable summary beside the binary archive, so the entry is
+    // inspectable directly from the shell (fs cat ...) for debug/ops.
+    auto summaryPath = path;
+    summaryPath += ".txt";
+    std::ofstream ts(summaryPath.c_str());
+    if (ts.is_open())
+    {
+        ts << "Id: " << e.id() << "\n";
+        ts << "Timestamp(ms): " << e.timestamp() << "\n";
+        ts << "UpdateTimestamp(ms): " << e.updateTimestamp() << "\n";
+        ts << "Severity: " << levelStr(e.severity()) << "\n";
+        ts << "Message: " << e.message() << "\n";
+        ts << "Resolved: " << (e.resolved() ? "true" : "false") << "\n";
+        ts << "AdditionalData:\n";
+        for (const auto& d : e.additionalData())
+        {
+            ts << "  " << d << "\n";
+        }
+        ts.close();
     }
     return path;
 }
