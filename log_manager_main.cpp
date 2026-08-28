@@ -10,7 +10,6 @@
 #include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server/manager.hpp>
-#include <sdeventplus/event.hpp>
 
 #include <filesystem>
 
@@ -36,19 +35,19 @@ extern "C" int logging_main(int /*argc*/, char* /*argv*/[])
     if (connect_to_dbroker(&busp) < 0 || !busp) {
         return -1;
     }
-    sdbusplus::bus::bus bus(busp, std::false_type{});
+    boost::asio::io_context io;
+    auto bus = std::make_shared<sdbusplus::asio::connection>(io, busp);
 #else
-    auto bus = sdbusplus::bus::new_default();
+    boost::asio::io_context io;
+    auto bus = std::make_shared<sdbusplus::asio::connection>(io);
 #endif
-    auto event = sdeventplus::Event::get_default();
-    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 
     // Add sdbusplus ObjectManager for the 'root' path of the logging manager.
-    sdbusplus::server::manager_t objManager(bus, OBJ_LOGGING);
+    sdbusplus::server::manager_t objManager(*bus, OBJ_LOGGING);
 
-    phosphor::logging::internal::Manager iMgr(bus, OBJ_INTERNAL);
+    phosphor::logging::internal::Manager iMgr(*bus, OBJ_INTERNAL);
 
-    phosphor::logging::Manager mgr(bus, OBJ_LOGGING, iMgr);
+    phosphor::logging::Manager mgr(*bus, OBJ_LOGGING, iMgr);
 
     // Create a directory to persist errors.
     std::filesystem::create_directories(ERRLOG_PERSIST_PATH);
@@ -69,11 +68,23 @@ extern "C" int logging_main(int /*argc*/, char* /*argv*/[])
         }
     }
 
-    bus.request_name(BUSNAME_LOGGING);
+    bus->request_name(BUSNAME_LOGGING);
 
 #ifdef __ZEPHYR__
     k_sem_give(&logging_ready_sem);
 #endif
 
-    return event.loop();
+    for (;;)
+    {
+        try
+        {
+            io.run();
+            break;
+        }
+        catch (const std::exception& e)
+        {
+            error("log_manager io.run threw an exception: {ERROR}", "ERROR", e);
+        }
+    }
+    return 0;
 }

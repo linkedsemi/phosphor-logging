@@ -1,3 +1,9 @@
 build:
   cmake: zephyr
   kconfig: zephyr/Kconfig
+  depends:
+    - sdbusplus
+    - basu
+    - nlohmann_json
+    - phosphor-dbus-interfaces
+    - cereal

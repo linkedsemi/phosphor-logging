@@ -239,7 +239,7 @@ void Manager::createEntry(std::string errMsg, Entry::Level errLvl,
         errLvl, std::move(errMsg), std::move(additionalData),
         std::move(objects), fwVersion, getEntrySerializePath(entryId), *this);
 
-    // serialize(*e);
+    serialize(*e);
 
     // if (isQuiesceOnErrorEnabled() && (errLvl < Entry::sevLowerLimit) &&
     //     isCalloutPresent(*e))

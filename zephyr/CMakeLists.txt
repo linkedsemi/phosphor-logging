@@ -30,5 +30,6 @@ if(CONFIG_OPENBMC_PHOSPHOR_LOGGING)
     zephyr_library_link_libraries(sdbusplus)
     zephyr_library_link_libraries(sdeventplus)
     zephyr_library_link_libraries(phosphor-dbus-interfaces)
+    zephyr_library_link_libraries(cereal)
 
 endif()

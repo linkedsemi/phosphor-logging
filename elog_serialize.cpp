@@ -2,15 +2,16 @@
 
 #include "elog_serialize.hpp"
 
-#ifndef __ZEPHYR__
-
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/vector.hpp>
 #include <phosphor-logging/log.hpp>
 
+#include <cerrno>
+#include <cstring>
 #include <fstream>
+#include <system_error>
 
 // Register class version
 // From cereal documentation;
@@ -114,9 +115,33 @@ fs::path getEntrySerializePath(uint32_t id, const fs::path& dir)
 fs::path serialize(const Entry& e, const fs::path& dir)
 {
     auto path = getEntrySerializePath(e.id(), dir);
+
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (ec)
+    {
+        log<level::ERR>("serialize: create_directories({DIR}) failed: {ERRNO}",
+                        entry("DIR=%s", dir.c_str()),
+                        entry("ERRNO=%d", ec.value()));
+    }
+
     std::ofstream os(path.c_str(), std::ios::binary);
+    if (!os.is_open())
+    {
+        log<level::ERR>("serialize: cannot open {PATH} for writing: {ERRNO}",
+                        entry("PATH=%s", path.c_str()),
+                        entry("ERRNO=%d", errno));
+        return path;
+    }
+
     cereal::BinaryOutputArchive oarchive(os);
     oarchive(e);
+    os.flush();
+    if (!os.good())
+    {
+        log<level::ERR>("serialize: write failed for {PATH}",
+                        entry("PATH=%s", path.c_str()));
+    }
     return path;
 }
 
@@ -155,33 +180,3 @@ bool deserialize(const fs::path& path, Entry& e)
 
 } // namespace logging
 } // namespace phosphor
-
-#else // __ZEPHYR__
-
-namespace phosphor
-{
-namespace logging
-{
-
-fs::path getEntrySerializePath(uint32_t id, const fs::path& dir)
-{
-    return dir / std::to_string(id);
-}
-
-fs::path serialize(const Entry& e, const fs::path& dir)
-{
-
-    return getEntrySerializePath(e.id(), dir);
-}
-
-bool deserialize(const fs::path& path, Entry& e)
-{
-    (void)path;
-    (void)e;
-    return false;
-}
-
-} // namespace logging
-} // namespace phosphor
-
-#endif // __ZEPHYR__
