@@ -2,8 +2,8 @@
 
 // const char* ERRLOG_PERSIST_PATH = "/var/lib/phosphor-logging/errors";
 // const char* EXTENSION_PERSIST_DIR = "/var/lib/phosphor-logging/extensions";
-const char* ERRLOG_PERSIST_PATH = "/SD2:/var/lib/phosphor-logging/errors";
-const char* EXTENSION_PERSIST_DIR = "/SD2:/var/lib/phosphor-logging/extensions";
+const char* ERRLOG_PERSIST_PATH = CONFIG_FS_ROOT_SD2 "/var/lib/phosphor-logging/errors";
+const char* EXTENSION_PERSIST_DIR = CONFIG_FS_ROOT_SD2 "/var/lib/phosphor-logging/extensions";
 // const char* ERRLOG_PERSIST_PATH = "/RAM:/var/lib/phosphor-logging/errors";
 // const char* EXTENSION_PERSIST_DIR = "/RAM:/var/lib/phosphor-logging/extensions";
 
