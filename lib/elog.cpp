@@ -31,20 +31,17 @@ auto _prepareMsg(const char* funcName)
 
 namespace
 {
-/* Zephyr: upper bound for the synchronous Commit round trip.
+/* Zephyr: report<>() is reached from D-Bus method handlers and signal callbacks
+ * all over the tree, and an exception raised in one of those cannot unwind
+ * through dbus-broker's C dispatch frames - it never reaches the thread
+ * trampoline in app/src/task_def.cpp, it aborts the whole BMC image. Catch it
+ * here instead, so that a failed Commit only loses one entry rather than the
+ * whole BMC.
  *
- * sdbusplus::bus::call() defaults to 25s, which is fatal here:
- *  - report<>() is called from D-Bus method handlers and signal callbacks all
- *    over the tree, and an exception raised in those cannot unwind through
- *    dbus-broker's C dispatch frames, so it does not even reach the thread
- *    trampoline in app/src/task_def.cpp - it aborts the whole BMC image.
- *  - it is reached through sdbusplus::bus::new_default(), i.e. the
- *    process-wide default bus, which on this platform is owned by whichever
- *    thread created it first. Everyone shares it, so a Commit can sit in a
- *    queue this thread never drains while the broker is busy (a bmcweb page
- *    load is enough) and burn the full timeout.
+ * The call keeps the sdbusplus/sd-bus default timeout on purpose: a slow
+ * logging service then delays this caller instead of dropping the entry early.
+ * The trade is that such a caller stays blocked for the full default timeout.
  */
-constexpr uint64_t commitTimeoutUs = 2ULL * 1000 * 1000;
 
 uint32_t commitImpl(const char* name, Entry::Level* level)
 {
@@ -65,7 +62,7 @@ uint32_t commitImpl(const char* name, Entry::Level* level)
         }
 
         auto bus = sdbusplus::bus::new_default();
-        auto reply = bus.call(msg, commitTimeoutUs);
+        auto reply = bus.call(msg);
 
         uint32_t entryID = 0;
         reply.read(entryID);
